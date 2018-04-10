@@ -10,7 +10,8 @@ files.remove('2016.xlsx')
 df1 = pd.read_excel('/2016.xlsx')
 for file in files:
     if file != ".DS_Store":
-        df2 = pd.read_excel('Output/' + file)
+        df2 = pd.read_excel('Merged/' + file)
         frames = [df1, df2]
         df1 = pd.concat(frames)
+
 
