@@ -34,9 +34,9 @@ Mean Data
   Lasso
     Root mean squared error: 4.78
     R squared value: -20.54
+    Bracket Score -4120
 
-  Bracket Score -4120
-    Linear SVM
+  Linear SVM
     0.15625
     Bracket Score -360
   Linear SGD
