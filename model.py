@@ -4,12 +4,15 @@
 
 import os
 import pandas as pd
+import numpy as np
+
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, SGDClassifier
 from sklearn.svm import LinearSVC
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.naive_bayes import GaussianNB
-import numpy as np
+from sklearn.decomposition import PCA
+from mord import OrdinalRidge, LAD
 
 
 # gets all features with filling method
@@ -128,6 +131,8 @@ def simple_regression(method):
     models.append(('Linear Regression', LinearRegression()))
     models.append(('Ridge', Ridge()))
     models.append(('Lasso', Lasso()))
+    models.append(('OrdinalRidge', OrdinalRidge()))
+    models.append(('LAD', LAD()))
     accuracies = []
     bracket_scores = []
 
@@ -146,7 +151,7 @@ def simple_regression(method):
 
         bracket_score = simulated_bracket_score(model, data2017, labels2017.as_matrix())
         bracket_scores.append(bracket_score)
-        print("Bracket Score " + str(bracket_score))
+        print("%s Bracket Score: " + str(bracket_score))
 
     max = np.argmax(bracket_scores)
     return models[max]
@@ -175,7 +180,7 @@ def simple_classification(method):
         accuracies.append(accuracy)
         bracket_score = simulated_bracket_score(model, data2017, labels2017.as_matrix())
         bracket_scores.append(bracket_score)
-        print("Bracket Score " + str(bracket_score))
+        print("%s Bracket Score: " + str(bracket_score))
     max = np.argmax(bracket_scores)
     return models[max]
 
