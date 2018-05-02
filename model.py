@@ -13,7 +13,7 @@ import numpy as np
 
 
 # gets all features with filling method
-def combine_tables(method):
+def get_all_features(method):
     root_dir = os.getcwd() + '/Merged'
     files = [item for item in os.listdir(root_dir) if os.path.isfile(os.path.join(root_dir, item))]
     files.sort()
@@ -75,155 +75,113 @@ def get_pure_basic_features(method):
 #     return df1
 
 
-def get_specific_year(year):
+def get_specific_year(year, method):
     df1 = pd.read_excel('Merged/' + year + '.xlsx')
-    df1 = df1.dropna(axis=0)  # DROPPING MISSING DATA
+    if method == "drop":
+        df1 = df1.dropna(axis=0)  # DROPPING MISSING DATA
+    elif method == "mean":
+        df1 = df1.fillna(df1.mean())  # fill with mean
     return df1
 
 
 # drop school and extracts labels
-def clear_tables(df):
+def split_data_labels(df):
     df = df.drop(['School'], axis=1)
+    df = df.drop(['Rk'], axis=1)
     return df['Games'], df.drop(['Games'], axis=1)
 
 
-def simple_regression(data, labels):
+def penalty_score_one(prediction, actual):
+    matrix = [
+        [10, -10, -30, -70, -150],
+        [-10, 30, -20, -60, -140],
+        [-30, -20, 70, -40, -120],
+        [-70, -60, -40, 150, -80],
+        [-150, -140, -120, -80, 310]
+    ]
+    return matrix[actual][prediction]
+
+
+# takes a trained model and predicts on a year. Returns
+def simulated_bracket_score(model, year_data, year_labels):
+    score = 0
+    predictions = model.predict(year_data)
+    predictions = np.rint(predictions)
+    for i in range(0, len(predictions)):
+        prediction = int(predictions[i])
+        if prediction < 0:
+            prediction = 0
+        if prediction > 4:
+            prediction = 4
+
+        score = score + penalty_score_one(prediction, year_labels[i])
+    return score
+
+
+def simple_regression(method):
+    data = get_all_features(method)
+    train_labels, train_data = split_data_labels(data)
+    data_2017 = get_specific_year('2017', method)
+    labels2017, data2017 = split_data_labels(data_2017)
+
     models = []
     models.append(('Linear Regression', LinearRegression()))
     models.append(('Ridge', Ridge()))
     models.append(('Lasso', Lasso()))
     accuracies = []
+    bracket_scores = []
 
     for name, model in models:
-        X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.4, random_state=0)
-        model.fit(X_train, y_train)
+        print(name)
+        model.fit(train_data, train_labels)
+        predictions = model.predict(data2017)
         # Root mean squared error
         print('%s %s Root mean squared error: %.2f' % ("", "",
-                                                       (np.mean((model.predict(X_test) - y_test) * 2)) * 0.5))
+                                                       (np.mean((predictions - labels2017) ** 2)) ** 0.5))
         # R squared value
-        rsq = model.score(X_test, y_test)
+        rsq = model.score(data2017, labels2017)
         print('%s %s R squared value: %.2f' % ("", "", rsq))
+
         accuracies.append(rsq)
-    max = np.argmax(accuracies)
+
+        bracket_score = simulated_bracket_score(model, data2017, labels2017.as_matrix())
+        bracket_scores.append(bracket_score)
+        print("Bracket Score " + str(bracket_score))
+
+    max = np.argmax(bracket_scores)
     return models[max]
 
 
-def simple_classification(data, labels):
+def simple_classification(method):
+    data = get_all_features(method)
+    train_labels, train_data = split_data_labels(data)
+    data_2017 = get_specific_year('2017', method)
+    labels2017, data2017 = split_data_labels(data_2017)
+
     models = []
-    # models.append(('Linear SVM', LinearSVC()))
+    models.append(('Linear SVM', LinearSVC()))
     models.append(('Linear SGD', SGDClassifier(random_state=0, learning_rate="invscaling", loss="log", penalty="l1",
                                                max_iter=1500, alpha=.0001, eta0=1.0, epsilon=.0001)))
     models.append(('Naive Bayes', GaussianNB()))
 
     accuracies = []
-
+    bracket_scores = []
     for name, model in models:
-        X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.4, random_state=0)
-        model.fit(X_train, y_train)
-        prediction = model.predict(X_test)
+        model.fit(train_data, train_labels)
+        prediction = model.predict(data2017)
         print(name)
-        accuracy = accuracy_score(y_test, prediction)
+        accuracy = accuracy_score(labels2017.as_matrix(), prediction)
         print(accuracy)
         accuracies.append(accuracy)
-    max = np.argmax(accuracies)
+        bracket_score = simulated_bracket_score(model, data2017, labels2017.as_matrix())
+        bracket_scores.append(bracket_score)
+        print("Bracket Score " + str(bracket_score))
+    max = np.argmax(bracket_scores)
     return models[max]
 
 
-# takes a model tests with different filling types
-def diff_filling_in_data(model):
-    drop_types = ["drop", "mean"]
-    accuracies = []
-    for mtype in drop_types:
-        data = combine_tables(mtype)
-        labels, data = clear_tables(data)
-        X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.4, random_state=0)
-        model.fit(X_train, y_train)
-        prediction = model.predict(X_test)
-        accuracy = accuracy_score(y_test, prediction)
-        print(accuracy)
-        accuracies.append(accuracy)
-
-    return accuracies
-
-
-def try_different_combinations_of_data(model):
-    data_sources = []
-    data_sources.append(combine_tables("mean"))
-    data_sources.append(get_pure_basic_features("drop"))
-
-    accuracies = []
-    for data_source in data_sources:
-        labels, data = clear_tables(data_source)
-
-        X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.4, random_state=0)
-        model.fit(X_train, y_train)
-        prediction = model.predict(X_test)
-        accuracy = accuracy_score(y_test, prediction)
-        print(accuracy)
-        accuracies.append(accuracy)
-
-        # to work with advanced data (since it does not have labels)
-        # data_adv = get_pure_advanced("mean").drop(['School'], axis=1)
-        # labels, idc = clear_tables(data_sources[0]) # hack to get labels
-        # X_train, X_test, y_train, y_test = train_test_split(data_adv, labels, test_size=0.4, random_state=0)
-        # model.fit(X_train, y_train)
-        # prediction = model.predict(X_test)
-        # accuracy = accuracy_score(y_test, prediction)
-        # print(accuracy)
-        # accuracies.append(accuracy)
-
-
-# return espn score like system
-def get_score(prediction, actual):
-    rounds = [10, 30, 70, 150, 310, 630] # cummulative
-    if actual == 0:
-        if prediction == 0:
-            return 10
-        else:
-            return 0
-    else:
-        if prediction == 0:
-            return 0
-        elif prediction > actual:
-            rounds_correct = actual + 1
-            return rounds[rounds_correct]
-        else:
-            rounds_correct = prediction - 1
-            return rounds[rounds_correct]
-
-
-# given the actual bracket array. What was the score
-def get_actual_score(actual):
-    rounds = [10, 30, 70, 150, 310, 630]
-    score = 0
-    for i in actual:
-        score = score + rounds[i]
-    return score
-
-
-# takes a trained model and predicts on a year. Returns
-def simulated_bracket_score(model, year_data, labels):
-    year_data = year_data.drop(['School'], axis=1).drop(['Games'], axis=1)
-    predictions = model.predict(year_data)
-    score = 0
-    for i in range(0, len(predictions)):
-        score = score + get_score(predictions[i], labels[i])
-    print("Predicted Score: " + str(score))
-
-    actual = get_actual_score(labels)
-    print("Actual Score: " + str(actual))
-
-    return score
-
-
-data = combine_tables("drop")
-labels, data = clear_tables(data)
-data_2017 = get_specific_year('2017')
-labels2017, data2017 = clear_tables(data_2017)
-name, model = simple_classification(data, labels)
-simulated_bracket_score(model, data_2017, labels2017.as_matrix())
-# model2 = SGDClassifier(random_state=0, learning_rate="invscaling", loss="log", penalty="l1",
-#                        max_iter=1500, alpha=.0001, eta0=1.0, epsilon=.0001)
-# diff_filling_in_data(model2)
-# simple_model(data, labels)
-# try_different_combinations_of_data(model2)
+if __name__ == "__main__":
+    simple_regression("drop")
+    simple_classification("drop")
+    simple_regression("mean")
+    simple_classification("mean")

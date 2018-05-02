@@ -1,0 +1,48 @@
+Dropped Data
+    Linear Regression
+      Root mean squared error: 20018.38
+      R squared value: -377509647.06
+      Bracket Score -4120
+    Ridge
+      Root mean squared error: 530.25
+      R squared value: -264869.31
+        Bracket Score -4120
+    Lasso
+      Root mean squared error: 2.40
+      R squared value: -4.43
+      Bracket Score -1360
+    Linear SVM
+      Accuracy: 0.15625
+      Bracket Score -360
+    Linear SGD
+      Accuracy: 0.03125
+      Bracket Score -4120
+    Naive Bayes
+      Accuracy: 0.625
+      Bracket Score -190
+
+Mean Data
+
+  Linear Regression
+    Root mean squared error: 40227.70
+    R squared value: -1524476564.13
+    Bracket Score -140
+  Ridge
+    Root mean squared error: 374.37
+    R squared value: -132028.32
+    Bracket Score -4120
+  Lasso
+    Root mean squared error: 4.78
+    R squared value: -20.54
+
+  Bracket Score -4120
+    Linear SVM
+    0.15625
+    Bracket Score -360
+  Linear SGD
+    0.15625
+    Bracket Score -360
+  Naive Bayes
+    0.71875
+    Bracket Score -140
+
